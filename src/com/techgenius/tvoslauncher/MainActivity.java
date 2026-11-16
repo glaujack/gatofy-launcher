@@ -609,9 +609,18 @@ public class MainActivity extends Activity {
 
     // ---------------------------------------------------------------- layout
 
+    /** Diagnóstico: descreve uma view para o log de foco. */
+    static String focusDesc(View v) {
+        if (v == null) return "nada";
+        int[] xy = new int[2];
+        v.getLocationOnScreen(xy);
+        return v.getClass().getSimpleName() + "@" + xy[0] + "," + xy[1];
+    }
+
     void buildChrome() {
         root = new FrameLayout(this);
         root.setBackground(null);
+        root.getViewTreeObserver().addOnGlobalFocusChangeListener((o, n) -> android.util.Log.i("GatofyFoco", focusDesc(o) + " -> " + focusDesc(n)));
 
         // One ambient wallpaper for every app. It is drawn tiny and upscaled, so it is already
         // soft; a slow drift keeps it alive without a per-frame blur on this weak GPU.
@@ -625,6 +634,7 @@ public class MainActivity extends Activity {
 
         sceneHome = new SceneHome(this);
         root.addView(sceneHome.sceneView, match());
+        root.addView(sceneHome.fadeOverlay, match());
 
         heroBack = heroLayer();
         heroFront = heroLayer();
@@ -3670,6 +3680,11 @@ public class MainActivity extends Activity {
             return true;
         }
         resetIdle();
+        // Gatofy: segurar "cima/baixo" na dock ou nos cartões não atravessa os níveis (dock -> cartões -> botão do topo)
+        if (ev.getAction() == KeyEvent.ACTION_DOWN && ev.getRepeatCount() > 0 && sceneHome != null && menuLayer == null && pickerLayer == null
+                && (ev.getKeyCode() == KeyEvent.KEYCODE_DPAD_UP || ev.getKeyCode() == KeyEvent.KEYCODE_DPAD_DOWN) && sceneHome.focusOnShelfOrDock()) {
+            return true;
+        }
         if (ev.getAction() == KeyEvent.ACTION_DOWN && getCurrentFocus() == null && sceneHome != null && pickerLayer == null && menuLayer == null && moveIndex < 0) {
             int kc = ev.getKeyCode();
             if ((kc == KeyEvent.KEYCODE_DPAD_UP || kc == KeyEvent.KEYCODE_DPAD_DOWN || kc == KeyEvent.KEYCODE_DPAD_LEFT || kc == KeyEvent.KEYCODE_DPAD_RIGHT)

@@ -1002,29 +1002,26 @@ public final class Scenes {
         private ValueAnimator bdAnim;
         private final Paint bdPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
 
-        /** Troca (com fade) o fundo pelo título em foco; null volta para a cena. */
+        /** Troca o fundo pelo título em foco (null volta para a cena). Imediato: um único redesenho; o fade é feito fora daqui (SceneHome). */
         public void setBackdrop(Bitmap b) {
-            if (b == bdCur || (b == null && bdCur == null)) return;
-            if (bdAnim != null) bdAnim.cancel();
-            final boolean toNull = b == null;
-            if (!toNull) { bdPrev = bdCur; bdCur = b; }
-            final float level0 = bdLevel;
-            final float mix0 = toNull ? bdMix : (bdPrev != null ? 0f : 1f);
-            bdAnim = ValueAnimator.ofFloat(0f, 1f);
-            bdAnim.setDuration(320);
-            bdAnim.addUpdateListener(a -> {
-                float t = (float) a.getAnimatedValue();
-                if (toNull) bdLevel = level0 * (1f - t);
-                else { bdLevel = level0 + (1f - level0) * t; bdMix = mix0 + (1f - mix0) * t; }
-                invalidate();
-            });
-            bdAnim.addListener(new android.animation.AnimatorListenerAdapter() {
-                @Override public void onAnimationEnd(android.animation.Animator an) {
-                    if (toNull) { bdCur = null; bdPrev = null; bdLevel = 0f; } else { bdPrev = null; bdMix = 1f; }
-                    invalidate();
-                }
-            });
-            bdAnim.start();
+            if (b == bdCur) return;
+            if (bdAnim != null) { bdAnim.cancel(); bdAnim = null; }
+            bdCur = b;
+            bdPrev = null;
+            bdLevel = b != null ? 1f : 0f;
+            bdMix = 1f;
+            invalidate();
+        }
+
+        /** Cópia pequena do último quadro desenhado (para o fade por cima, na GPU). */
+        public Bitmap snapshot() {
+            Bitmap f = cachedFrameBmp;
+            if (f == null || f.isRecycled()) return null;
+            try {
+                return Bitmap.createScaledBitmap(f, Math.max(1, f.getWidth() / 2), Math.max(1, f.getHeight() / 2), true);
+            } catch (Throwable t) {
+                return null;
+            }
         }
 
         private String bdKey() {

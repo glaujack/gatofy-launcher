@@ -52,6 +52,8 @@ final class SceneHome {
     final MainActivity host;
     final Scenes.SceneView sceneView;
     final FrameLayout overlay;
+    /** Gatofy: imagem do quadro anterior que some com fade (GPU) quando o fundo do título troca. */
+    final ImageView fadeOverlay;
     /** Continue-watching / QR-login popups shown above the Nuvio and Stremio dock tiles. */
     final List<WatchPopup> watchPopups = new ArrayList<>();
 
@@ -143,6 +145,12 @@ final class SceneHome {
                 });
             }
         });
+
+        this.fadeOverlay = new ImageView(host);
+        this.fadeOverlay.setScaleType(ImageView.ScaleType.FIT_XY);
+        this.fadeOverlay.setVisibility(View.GONE);
+        this.fadeOverlay.setFocusable(false);
+        this.fadeOverlay.setClickable(false);
 
         this.overlay = new FrameLayout(host);
         this.overlay.setClipChildren(false);
@@ -830,7 +838,7 @@ final class SceneHome {
 
     void hideShelfImmediate() {
         host.handler.removeCallbacks(clearBackdrop);
-        sceneView.setBackdrop(null);
+        applyBackdrop(null);
         activeShelfTile = null;
         activeShelfPkg = null;
         lastWatchSig = "";
@@ -847,7 +855,7 @@ final class SceneHome {
 
     private void animateShelfOut() {
         host.handler.removeCallbacks(clearBackdrop);
-        sceneView.setBackdrop(null);
+        applyBackdrop(null);
         lastWatchSig = "";
         shelfCards.clear();
         if (shelfBox == null || shelfBox.getVisibility() != View.VISIBLE) {
@@ -1043,12 +1051,33 @@ final class SceneHome {
     private final android.util.LruCache<String, Bitmap> backdropCache = new android.util.LruCache<>(6);
     private String backdropWanted;
     private final Runnable clearBackdrop = new Runnable() {
-        @Override public void run() { backdropWanted = null; SceneHome.this.sceneView.setBackdrop(null); }
+        @Override public void run() { backdropWanted = null; SceneHome.this.applyBackdrop(null); }
     };
 
     /** Imagem grande do título: troca o tamanho do TMDB (original/w780…) por w1280, que cabe numa TV fraca. */
     private static String largeArt(String url) {
         return url == null ? null : url.replaceFirst("(image\\.tmdb\\.org/t/p/)(?:w\\d+|original)/", "$1w1280/");
+    }
+
+    /** Troca o fundo na hora (uma só renderização) e suaviza com um fade barato do quadro anterior. */
+    private void applyBackdrop(Bitmap b) {
+        Bitmap snap = sceneView.snapshot();
+        sceneView.setBackdrop(b);
+        if (snap == null) return;
+        fadeOverlay.animate().cancel();
+        fadeOverlay.setImageBitmap(snap);
+        fadeOverlay.setAlpha(1f);
+        fadeOverlay.setVisibility(View.VISIBLE);
+        fadeOverlay.animate().alpha(0f).setDuration(240).withEndAction(() -> {
+            fadeOverlay.setVisibility(View.GONE);
+            fadeOverlay.setImageDrawable(null);
+        }).start();
+    }
+
+    /** Foco na dock ou nos cartões (usado para não deixar a repetição de "cima/baixo" atravessar os níveis). */
+    boolean focusOnShelfOrDock() {
+        View f = host.getCurrentFocus();
+        return f != null && (shelfCards.contains(f) || dockTiles.contains(f));
     }
 
     void onShelfCardFocus(WatchCardData d, boolean has) {
@@ -1061,12 +1090,12 @@ final class SceneHome {
         final String url = largeArt(d.backdropUrl);
         backdropWanted = url;
         Bitmap cached = backdropCache.get(url);
-        if (cached != null) { sceneView.setBackdrop(cached); return; }
+        if (cached != null) { applyBackdrop(cached); return; }
         host.io.execute(() -> {
             Bitmap b = Suggestions.image(host, url, "w1280", 1280);
             if (b == null) return;
             backdropCache.put(url, b);
-            host.handler.post(() -> { if (url.equals(backdropWanted)) sceneView.setBackdrop(b); });
+            host.handler.post(() -> { if (url.equals(backdropWanted)) applyBackdrop(b); });
         });
     }
 
