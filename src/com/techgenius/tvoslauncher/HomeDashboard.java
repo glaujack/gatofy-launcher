@@ -1827,7 +1827,7 @@ public final class HomeDashboard {
                 if (sReleaseIdx >= itemsRef.size()) sReleaseIdx = 0;
                 final Suggestions.Item it = itemsRef.get(sReleaseIdx);
                 titleTv.setText(it.title != null ? it.title : "");
-                String typeBadge = "tv".equalsIgnoreCase(it.type) || "series".equalsIgnoreCase(it.type) ? "TV Series" : "Movie";
+                String typeBadge = "tv".equalsIgnoreCase(it.type) || "series".equalsIgnoreCase(it.type) ? I18n.t(host, "TV Series") : I18n.t(host, "Movie");
                 StringBuilder sb = new StringBuilder(typeBadge);
                 if (it.year != null && !it.year.isEmpty()) sb.append(" • ").append(it.year);
                 if (it.rating > 0) sb.append(String.format(Locale.US, " • ★ %.1f", it.rating));

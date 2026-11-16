@@ -46,7 +46,7 @@ public final class I18n {
         {LANG_DE, "Deutsch", "tvOS Launcher auf Deutsch verwenden"},
         {LANG_IT, "Italiano", "Usa tvOS Launcher in italiano"},
         {LANG_RU, "Русский", "Использовать tvOS Launcher на русском"},
-        {LANG_PT, "Português", "Usar o tvOS Launcher em português"},
+        {LANG_PT, "Português (Brasil)", "Usar o tvOS Launcher em português do Brasil"},
         {LANG_AR, "العربية", "استخدم tvOS Launcher باللغة العربية"},
         {LANG_JA, "日本語", "tvOS Launcher を日本語で使用する"},
         {LANG_ZH, "中文", "使用中文版 tvOS Launcher"},
@@ -226,6 +226,7 @@ public final class I18n {
         initSwedish();
         initKorean();
         initAzerbaijani();
+        I18nPtBr.init(LANG_MAPS.get(LANG_PT));   // Gatofy: pt-BR completo (substitui o pt-PT original)
         I18nHe.init(LANG_MAPS.get(LANG_HE));
         LANG_MAPS.get(LANG_HE).put("dash_cricket", "תוצאות קריקט בשידור חי");
         LANG_MAPS.get(LANG_HE).put("dash_news", "חדשות בשידור חי");
@@ -1750,7 +1751,7 @@ public final class I18n {
             case LANG_DE: return Locale.forLanguageTag("de-DE");
             case LANG_IT: return Locale.forLanguageTag("it-IT");
             case LANG_RU: return Locale.forLanguageTag("ru-RU");
-            case LANG_PT: return Locale.forLanguageTag("pt-PT");
+            case LANG_PT: return Locale.forLanguageTag("pt-BR");
             case LANG_AR: return Locale.forLanguageTag("ar-SA");
             case LANG_JA: return Locale.forLanguageTag("ja-JP");
             case LANG_ZH: return Locale.forLanguageTag("zh-CN");
@@ -1864,11 +1865,12 @@ public final class I18n {
             case LANG_ES:
             case LANG_FR:
             case LANG_IT:
-            case LANG_PT:
             case LANG_RU:
             case LANG_HI:
             case LANG_AR:
                 return new SimpleDateFormat("EEEE d MMMM", loc).format(date);
+            case LANG_PT:
+                return new SimpleDateFormat("EEEE, d 'de' MMMM", loc).format(date);
             default:
                 return new SimpleDateFormat("EEEE d MMMM", Locale.UK).format(date);
         }
