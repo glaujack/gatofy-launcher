@@ -1080,8 +1080,16 @@ final class SceneHome {
         return f != null && (shelfCards.contains(f) || dockTiles.contains(f));
     }
 
+    private final Runnable applyWanted = new Runnable() {
+        @Override public void run() {
+            Bitmap b = backdropWanted != null ? backdropCache.get(backdropWanted) : null;
+            if (b != null) SceneHome.this.applyBackdrop(b);
+        }
+    };
+
     void onShelfCardFocus(WatchCardData d, boolean has) {
         host.handler.removeCallbacks(clearBackdrop);
+        host.handler.removeCallbacks(applyWanted);
         if (!has) {
             host.handler.postDelayed(clearBackdrop, 260);   // passar de um cartão para outro não pisca
             return;
@@ -1090,12 +1098,17 @@ final class SceneHome {
         final String url = largeArt(d.backdropUrl);
         backdropWanted = url;
         Bitmap cached = backdropCache.get(url);
-        if (cached != null) { applyBackdrop(cached); return; }
+        if (cached != null) { host.handler.postDelayed(applyWanted, 260); return; }   // só troca se o foco parar no cartão: andar rápido não redesenha nada
         host.io.execute(() -> {
             Bitmap b = Suggestions.image(host, url, "w1280", 1280);
             if (b == null) return;
             backdropCache.put(url, b);
-            host.handler.post(() -> { if (url.equals(backdropWanted)) applyBackdrop(b); });
+            host.handler.post(() -> {
+                if (url.equals(backdropWanted)) {
+                    host.handler.removeCallbacks(applyWanted);
+                    host.handler.postDelayed(applyWanted, 120);
+                }
+            });
         });
     }
 

@@ -617,6 +617,8 @@ public class MainActivity extends Activity {
         return v.getClass().getSimpleName() + "@" + xy[0] + "," + xy[1];
     }
 
+    private long lastSideKeyAt;
+
     void buildChrome() {
         root = new FrameLayout(this);
         root.setBackground(null);
@@ -3680,6 +3682,18 @@ public class MainActivity extends Activity {
             return true;
         }
         resetIdle();
+        // Gatofy: um clique nas laterais move um item só. Repetições (tecla segurada) e rajadas muito rápidas do controle são ignoradas.
+        if ((ev.getKeyCode() == KeyEvent.KEYCODE_DPAD_LEFT || ev.getKeyCode() == KeyEvent.KEYCODE_DPAD_RIGHT) && sceneHome != null
+                && menuLayer == null && pickerLayer == null && sceneHome.focusOnShelfOrDock()) {
+            android.util.Log.i("GatofyTecla", (ev.getKeyCode() == KeyEvent.KEYCODE_DPAD_LEFT ? "esq" : "dir") + " acao=" + ev.getAction()
+                    + " repete=" + ev.getRepeatCount() + " dt=" + (ev.getEventTime() - lastSideKeyAt) + "ms");
+            if (ev.getAction() == KeyEvent.ACTION_DOWN) {
+                long now = ev.getEventTime();
+                boolean tooFast = now - lastSideKeyAt < 150;
+                lastSideKeyAt = now;
+                if (ev.getRepeatCount() > 0 || tooFast) return true;
+            }
+        }
         // Gatofy: segurar "cima/baixo" na dock ou nos cartões não atravessa os níveis (dock -> cartões -> botão do topo)
         if (ev.getAction() == KeyEvent.ACTION_DOWN && ev.getRepeatCount() > 0 && sceneHome != null && menuLayer == null && pickerLayer == null
                 && (ev.getKeyCode() == KeyEvent.KEYCODE_DPAD_UP || ev.getKeyCode() == KeyEvent.KEYCODE_DPAD_DOWN) && sceneHome.focusOnShelfOrDock()) {
