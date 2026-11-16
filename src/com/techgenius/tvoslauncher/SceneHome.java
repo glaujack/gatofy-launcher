@@ -104,6 +104,7 @@ final class SceneHome {
     boolean backDownInHome = false;
     int focusedDockIdx = 0;
     int focusedShelfIdx = 0;
+    boolean shelfWasFocused;   // o último foco conhecido foi num cartão da fileira (e não na dock)
     int moveDockIdx = -1;
     int currentDockCols = 12;
     int currentMaxSingleRowApps = 10;
@@ -730,6 +731,7 @@ final class SceneHome {
 
     void onDockTileFocusForShelf(View tile, MainActivity.AppEntry a, boolean isGear, boolean isMore, WatchPopup popup, boolean has) {
         if (has) {
+            shelfWasFocused = false;
             if (isGear || isMore || a == null || a.pkg == null || a.pkg.isEmpty()) {
                 hideShelf();
                 showDashboard();
@@ -1022,6 +1024,21 @@ final class SceneHome {
         }
     }
 
+    /**
+     * Gatofy: se o foco se perdeu (fileira reconstruída, diálogo do sistema…), a próxima tecla direcional voltaria ao
+     * primeiro botão da tela (o do topo). Aqui ela devolve o foco ao último ponto conhecido: o cartão ou o ícone da dock.
+     */
+    boolean restoreLostFocus() {
+        if (host.getCurrentFocus() != null || sheetLayer != null || host.menuLayer != null || isAnyPopupShowing() || moveDockIdx >= 0) return false;
+        boolean shelfUp = shelfBox != null && shelfBox.getVisibility() == View.VISIBLE && !shelfHiding && !shelfCards.isEmpty();
+        View target = null;
+        if (shelfUp && shelfWasFocused) target = shelfCards.get(Math.min(focusedShelfIdx, shelfCards.size() - 1));
+        else if (!dockTiles.isEmpty()) target = dockTiles.get(Math.max(0, Math.min(focusedDockIdx, dockTiles.size() - 1)));
+        if (target == null || !target.isAttachedToWindow()) return false;
+        android.util.Log.i("GatofyLauncher", "foco perdido: restaurado em " + (shelfUp && shelfWasFocused ? "cartão " + focusedShelfIdx : "dock " + focusedDockIdx));
+        return target.requestFocus();
+    }
+
     // ---- Gatofy: o fundo acompanha o título em foco ----
     private final android.util.LruCache<String, Bitmap> backdropCache = new android.util.LruCache<>(6);
     private String backdropWanted;
@@ -1058,6 +1075,7 @@ final class SceneHome {
             onShelfCardFocus(d, has);
             if (has) {
                 focusedShelfIdx = index;
+                shelfWasFocused = true;
             } else {
                 overlay.post(this::hideShelfIfFocusLeft);
             }

@@ -1729,6 +1729,9 @@ public final class Scenes {
                 canvas.drawRect(0, 0, w, h, shadePaint);
             }
 
+            // Gatofy: com o fundo do título em foco, o relógio grande some (a cor dele acompanhava a cena, não a imagem)
+            int clockLayer = (bdCur != null && bdLevel > 0.01f) ? canvas.saveLayerAlpha(0, 0, w, h, Math.round(255 * (1f - bdLevel))) : -1;
+
             // 3. Giant Glass Clock (iPhone Duo / Rounded / Tall Glass)
             float u = Math.min(w / 960f, h / 540f);
             Context ctx = getContext();
@@ -1908,6 +1911,8 @@ public final class Scenes {
                             isDuo, isRounded, false, ls, darkClk);
                 }
             }
+
+            if (clockLayer >= 0) canvas.restoreToCount(clockLayer);
 
             // 4. Foreground cutout (mountain ridge / volcano / fog hills / rainforest canopy)
             if (!classicClockOnlyMode && ls.fg != null) {

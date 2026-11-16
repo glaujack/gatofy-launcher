@@ -3670,6 +3670,11 @@ public class MainActivity extends Activity {
             return true;
         }
         resetIdle();
+        if (ev.getAction() == KeyEvent.ACTION_DOWN && getCurrentFocus() == null && sceneHome != null && pickerLayer == null && menuLayer == null && moveIndex < 0) {
+            int kc = ev.getKeyCode();
+            if ((kc == KeyEvent.KEYCODE_DPAD_UP || kc == KeyEvent.KEYCODE_DPAD_DOWN || kc == KeyEvent.KEYCODE_DPAD_LEFT || kc == KeyEvent.KEYCODE_DPAD_RIGHT)
+                    && sceneHome.restoreLostFocus()) return true;   // Gatofy: foco perdido volta ao último ponto, e não ao botão do topo
+        }
         if (!replayingBack) navSound(this, ev);  // a replayed Back already clicked
         if (search != null && pickerLayer == search.layer && menuLayer == null) {
             return search.dispatch(ev) || super.dispatchKeyEvent(ev);
