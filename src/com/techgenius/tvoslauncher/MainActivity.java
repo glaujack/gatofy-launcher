@@ -524,6 +524,14 @@ public class MainActivity extends Activity {
         }
     }
 
+    private static boolean askedTvListingsThisProcess;
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) handler.postDelayed(this::ensureTvListingsPermission, 800);
+    }
+
     private void ensureTvListingsPermission() {
         try {
             if (checkSelfPermission("android.permission.READ_TV_LISTINGS") == PackageManager.PERMISSION_GRANTED) {
@@ -539,8 +547,10 @@ public class MainActivity extends Activity {
                 });
                 return;
             }
-            if (SetupActivity.done(this) && cwEnabled() && !prefs.getBoolean("asked_tv_listings_perm", false)) {
-                prefs.edit().putBoolean("asked_tv_listings_perm", true).apply();
+            // Gatofy: ask only while this window has focus (a dialog on top makes the system drop the request)
+            // and no more than once per process, instead of a one-time flag that a dropped request used up.
+            if (SetupActivity.done(this) && cwEnabled() && !askedTvListingsThisProcess && hasWindowFocus()) {
+                askedTvListingsThisProcess = true;
                 requestPermissions(new String[]{"android.permission.READ_TV_LISTINGS"}, 901);
             }
         } catch (Throwable ignored) {
@@ -2138,7 +2148,7 @@ public class MainActivity extends Activity {
 
     /** Continue Watching can be switched off per profile (Settings -> Continue Watching); off by default. */
     boolean cwEnabled() {
-        return Profiles.homePrefs(this).getBoolean("cw_enabled", false);
+        return Profiles.homePrefs(this).getBoolean("cw_enabled", true);
     }
 
     /** The tab bar only appears when there are two things to switch between. */
