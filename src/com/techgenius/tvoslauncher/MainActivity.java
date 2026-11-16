@@ -2147,6 +2147,11 @@ public class MainActivity extends Activity {
     }
 
     /** Continue Watching can be switched off per profile (Settings -> Continue Watching); off by default. */
+    /** Fundo acompanha o título em foco (Continue assistindo). Ligado por padrão. */
+    boolean cwBackdropEnabled() {
+        return Profiles.homePrefs(this).getBoolean("cw_backdrop", true);
+    }
+
     boolean cwEnabled() {
         return Profiles.homePrefs(this).getBoolean("cw_enabled", true);
     }

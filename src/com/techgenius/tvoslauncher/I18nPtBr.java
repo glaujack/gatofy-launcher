@@ -1243,5 +1243,6 @@ final class I18nPtBr {
         m.put("hours", "horas");
         m.put("row", "linha");
         m.put("rows", "linhas");
+        m.put("Background follows the focused title", "Fundo acompanha o título em foco");
     }
 }

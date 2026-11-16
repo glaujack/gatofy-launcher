@@ -827,6 +827,8 @@ final class SceneHome {
     }
 
     void hideShelfImmediate() {
+        host.handler.removeCallbacks(clearBackdrop);
+        sceneView.setBackdrop(null);
         activeShelfTile = null;
         activeShelfPkg = null;
         lastWatchSig = "";
@@ -842,6 +844,8 @@ final class SceneHome {
     }
 
     private void animateShelfOut() {
+        host.handler.removeCallbacks(clearBackdrop);
+        sceneView.setBackdrop(null);
         lastWatchSig = "";
         shelfCards.clear();
         if (shelfBox == null || shelfBox.getVisibility() != View.VISIBLE) {
@@ -1018,8 +1022,40 @@ final class SceneHome {
         }
     }
 
+    // ---- Gatofy: o fundo acompanha o título em foco ----
+    private final android.util.LruCache<String, Bitmap> backdropCache = new android.util.LruCache<>(6);
+    private String backdropWanted;
+    private final Runnable clearBackdrop = new Runnable() {
+        @Override public void run() { backdropWanted = null; SceneHome.this.sceneView.setBackdrop(null); }
+    };
+
+    /** Imagem grande do título: troca o tamanho do TMDB (original/w780…) por w1280, que cabe numa TV fraca. */
+    private static String largeArt(String url) {
+        return url == null ? null : url.replaceFirst("(image\\.tmdb\\.org/t/p/)(?:w\\d+|original)/", "$1w1280/");
+    }
+
+    void onShelfCardFocus(WatchCardData d, boolean has) {
+        host.handler.removeCallbacks(clearBackdrop);
+        if (!has) {
+            host.handler.postDelayed(clearBackdrop, 260);   // passar de um cartão para outro não pisca
+            return;
+        }
+        if (!host.cwBackdropEnabled() || d == null || d.backdropUrl == null || d.backdropUrl.isEmpty()) return;
+        final String url = largeArt(d.backdropUrl);
+        backdropWanted = url;
+        Bitmap cached = backdropCache.get(url);
+        if (cached != null) { sceneView.setBackdrop(cached); return; }
+        host.io.execute(() -> {
+            Bitmap b = Suggestions.image(host, url, "w1280", 1280);
+            if (b == null) return;
+            backdropCache.put(url, b);
+            host.handler.post(() -> { if (url.equals(backdropWanted)) sceneView.setBackdrop(b); });
+        });
+    }
+
     View buildWatchCard(WatchCardData d, int index, int cardW, int cardH) {
         return buildWatchCard(d, index, cardW, cardH, (v, has) -> {
+            onShelfCardFocus(d, has);
             if (has) {
                 focusedShelfIdx = index;
             } else {

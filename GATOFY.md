@@ -12,6 +12,8 @@ Fork do tvOS Launcher (Apache-2.0) para uso com o Gatofy TV (`me.gatofy.tv`).
 
 - **Português do Brasil (pt-BR) completo**: `I18nPtBr.java` traz ~1.230 textos (o original só tinha ~370 em português europeu e deixava o resto em inglês). Locale `pt-BR`, data "segunda-feira, 16 de novembro", relógio de 24 h. Textos novos: acrescentar a chave em inglês e a tradução em `I18nPtBr.init`.
 
+- **Fundo acompanha o título em foco**: ao focar um cartão de "Continue assistindo" (de qualquer app), o fundo troca com fade para a imagem do título (TMDB w1280), no lugar da cena, com o relógio de vidro por cima e película para legibilidade. Opção em Configurações → Apps ("Fundo acompanha o título em foco", ligada por padrão). Só no visual Cenas noturnas (não no Clássico).
+
 ## Build
 `source <env do toolchain>; bash build.sh` gera `build/tvos-home.apk` (chave de depuração local, não versionada).
 

@@ -995,6 +995,68 @@ public final class Scenes {
         private Bitmap lastNotifiedBg;
         private Bitmap cachedFrameBmp;
         private String cachedFrameKey;
+
+        // Gatofy: fundo que acompanha o título em foco ("Continue assistindo"). Entra por cima da cena e por baixo do relógio.
+        private Bitmap bdCur, bdPrev;
+        private float bdMix = 1f, bdLevel = 0f;
+        private ValueAnimator bdAnim;
+        private final Paint bdPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+
+        /** Troca (com fade) o fundo pelo título em foco; null volta para a cena. */
+        public void setBackdrop(Bitmap b) {
+            if (b == bdCur || (b == null && bdCur == null)) return;
+            if (bdAnim != null) bdAnim.cancel();
+            final boolean toNull = b == null;
+            if (!toNull) { bdPrev = bdCur; bdCur = b; }
+            final float level0 = bdLevel;
+            final float mix0 = toNull ? bdMix : (bdPrev != null ? 0f : 1f);
+            bdAnim = ValueAnimator.ofFloat(0f, 1f);
+            bdAnim.setDuration(320);
+            bdAnim.addUpdateListener(a -> {
+                float t = (float) a.getAnimatedValue();
+                if (toNull) bdLevel = level0 * (1f - t);
+                else { bdLevel = level0 + (1f - level0) * t; bdMix = mix0 + (1f - mix0) * t; }
+                invalidate();
+            });
+            bdAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(android.animation.Animator an) {
+                    if (toNull) { bdCur = null; bdPrev = null; bdLevel = 0f; } else { bdPrev = null; bdMix = 1f; }
+                    invalidate();
+                }
+            });
+            bdAnim.start();
+        }
+
+        private String bdKey() {
+            return (bdCur != null ? bdCur.getGenerationId() : 0) + ":" + (bdPrev != null ? bdPrev.getGenerationId() : 0)
+                    + ":" + Math.round(bdLevel * 24) + ":" + Math.round(bdMix * 24);
+        }
+
+        private void drawCropWithPaint(Canvas canvas, Bitmap bmp, int viewW, int viewH, Paint p) {
+            int bw = bmp.getWidth(), bh = bmp.getHeight();
+            float scale = Math.max((float) viewW / bw, (float) viewH / bh);
+            float sw = viewW / scale, sh = viewH / scale;
+            int sx = Math.max(0, Math.round((bw - sw) * 0.5f));
+            int sy = Math.max(0, Math.round((bh - sh) * 0.5f));
+            srcRect.set(sx, sy, Math.min(bw, Math.round(sx + sw)), Math.min(bh, Math.round(sy + sh)));
+            dstRect.set(0, 0, viewW, viewH);
+            canvas.drawBitmap(bmp, srcRect, dstRect, p);
+        }
+
+        private void drawBackdrop(Canvas canvas, int w, int h) {
+            if (bdCur == null || bdCur.isRecycled() || bdLevel <= 0.01f) return;
+            if (bdPrev != null && !bdPrev.isRecycled() && bdMix < 1f) {
+                bdPaint.setAlpha(Math.round(255 * bdLevel));
+                drawCropWithPaint(canvas, bdPrev, w, h, bdPaint);
+            }
+            bdPaint.setAlpha(Math.round(255 * bdLevel * (bdPrev != null ? bdMix : 1f)));
+            drawCropWithPaint(canvas, bdCur, w, h, bdPaint);
+            // película: o relógio (topo) e os cartões (embaixo) continuam legíveis sobre qualquer imagem
+            shadePaint.setShader(new LinearGradient(0, 0, 0, h,
+                    new int[]{Color.argb(Math.round(80 * bdLevel), 0, 0, 0), Color.argb(Math.round(55 * bdLevel), 0, 0, 0), Color.argb(Math.round(190 * bdLevel), 0, 0, 0)},
+                    new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
+            canvas.drawRect(0, 0, w, h, shadePaint);
+        }
         private String lastTickSignature;
 
         private final Runnable rotateTick = new Runnable() {
@@ -1618,7 +1680,7 @@ public final class Scenes {
                             + CustomMedia.getRedditWallpaperTimestamp(ctx, CustomMedia.SCOPE_SCENE) + "|"
                             + (classicWallBmp != null && !classicWallBmp.isRecycled() ? classicWallBmp.getGenerationId() : 0) + "|"
                             + CustomMedia.getCustomLockTimestamp(ctx) + "|"
-                            + buildGreeting(ctx) + "|" + w + "x" + h;
+                            + buildGreeting(ctx) + "|" + w + "x" + h + "|bd" + bdKey();
                     if (!frameKey.equals(cachedFrameKey) || cachedFrameBmp == null
                             || cachedFrameBmp.getWidth() != w || cachedFrameBmp.getHeight() != h) {
                         if (cachedFrameBmp == null || cachedFrameBmp.getWidth() != w || cachedFrameBmp.getHeight() != h) {
@@ -1648,6 +1710,7 @@ public final class Scenes {
             if (!classicClockOnlyMode) {
                 // 1. Background image (center-crop)
                 drawCenterCrop(canvas, ls.bg, w, h);
+                drawBackdrop(canvas, w, h);
 
                 // 2. Scene shade gradient
                 if ("water".equals(sp.id)) {
@@ -1848,7 +1911,12 @@ public final class Scenes {
 
             // 4. Foreground cutout (mountain ridge / volcano / fog hills / rainforest canopy)
             if (!classicClockOnlyMode && ls.fg != null) {
-                drawCenterCrop(canvas, ls.fg, w, h);
+                if (bdCur != null && bdLevel > 0.01f) {   // fundo do título em foco: o primeiro plano da cena some junto
+                    bdPaint.setAlpha(Math.round(255 * (1f - bdLevel)));
+                    if (bdPaint.getAlpha() > 4) drawCropWithPaint(canvas, ls.fg, w, h, bdPaint);
+                } else {
+                    drawCenterCrop(canvas, ls.fg, w, h);
+                }
             }
 
             // 5. Line 1 (Greeting with person name) + Line 2 (Date & Weather) above the clock

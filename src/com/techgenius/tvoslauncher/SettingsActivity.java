@@ -1193,6 +1193,12 @@ public class SettingsActivity extends Activity {
                     boolean on = !Profiles.homePrefs(this).getBoolean("cw_enabled", true);
                     Profiles.homePrefs(this).edit().putBoolean("cw_enabled", on).apply();
                 });
+        row(tr("Background follows the focused title", "Arka plan odaktaki başlığı izler"),
+                () -> Profiles.homePrefs(this).getBoolean("cw_backdrop", true) ? tr("On", "Açık") : tr("Off", "Kapalı"),
+                () -> {
+                    boolean on = !Profiles.homePrefs(this).getBoolean("cw_backdrop", true);
+                    Profiles.homePrefs(this).edit().putBoolean("cw_backdrop", on).apply();
+                });
         row(tr("Home screen weather shortcut", "Ana ekranda hava durumu kısayolu"),
                 () -> SceneHome.isWeatherShortcutEnabled(this) ? tr("On", "Açık") : tr("Off", "Kapalı"),
                 () -> {
